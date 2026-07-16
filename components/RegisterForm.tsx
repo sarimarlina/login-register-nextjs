@@ -2,32 +2,53 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import {
+  type FormEvent,
+  useState,
+} from "react";
+
+import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterForm() {
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
+  const [password, setPassword] =
     useState("");
-  const [agree, setAgree] = useState(false);
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [agree, setAgree] =
+    useState(false);
 
-  function handleRegister(
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  async function handleRegister(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
     setError("");
-    setSuccess(false);
+    setSuccess("");
 
-    if (name.trim().length < 3) {
-      setError("Nama minimal terdiri dari 3 karakter.");
+    const cleanName = name.trim();
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    if (cleanName.length < 3) {
+      setError(
+        "Nama minimal terdiri dari 3 karakter.",
+      );
       return;
     }
 
@@ -40,7 +61,7 @@ export default function RegisterForm() {
 
     if (password !== confirmPassword) {
       setError(
-        "Konfirmasi password tidak sama dengan password.",
+        "Konfirmasi password tidak sama.",
       );
       return;
     }
@@ -54,22 +75,56 @@ export default function RegisterForm() {
 
     setLoading(true);
 
-    // Tidak menggunakan database.
-    // Proses register hanya simulasi tampilan.
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
+    try {
+      const supabase = createClient();
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 1000);
-    }, 600);
+      const { data, error: registerError } =
+        await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: {
+              full_name: cleanName,
+            },
+          },
+        });
+
+      if (registerError) {
+        setError(
+          translateRegisterError(
+            registerError.message,
+          ),
+        );
+        return;
+      }
+
+      if (data.session) {
+        setSuccess(
+          "Registrasi berhasil. Membuka halaman admin...",
+        );
+
+        router.replace("/admin");
+        router.refresh();
+        return;
+      }
+
+      setSuccess(
+        "Registrasi berhasil. Silakan periksa email untuk mengaktifkan akun.",
+      );
+    } catch (registerError) {
+      console.error(registerError);
+
+      setError(
+        "Tidak dapat terhubung ke Supabase. Periksa koneksi dan konfigurasi.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10">
       <section className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl lg:grid-cols-2">
-        {/* Bagian kiri */}
         <div className="hidden min-h-[720px] flex-col justify-between bg-gradient-to-br from-fuchsia-600 via-violet-600 to-indigo-600 p-12 text-white lg:flex">
           <div>
             <div className="inline-flex rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium backdrop-blur">
@@ -81,51 +136,24 @@ export default function RegisterForm() {
             </h1>
 
             <p className="mt-6 max-w-md text-lg leading-8 text-white/80">
-              Lengkapi formulir registrasi untuk membuat
-              akun administrasi baru.
+              Akun akan disimpan dan diamankan
+              menggunakan Supabase Authentication.
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                ✓
-              </span>
-
-              <p className="text-sm text-white/80">
-                Tampilan responsif untuk semua perangkat
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                ✓
-              </span>
-
-              <p className="text-sm text-white/80">
-                Dibuat menggunakan Next.js
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                ✓
-              </span>
-
-              <p className="text-sm text-white/80">
-                Siap di-deploy ke Vercel
-              </p>
-            </div>
+          <div className="space-y-4 text-sm text-white/80">
+            <p>✓ Akun tersimpan di Supabase</p>
+            <p>✓ Password dikelola dengan aman</p>
+            <p>✓ Siap di-deploy ke Vercel</p>
           </div>
         </div>
 
-        {/* Bagian kanan */}
         <div className="flex min-h-[720px] items-center p-6 sm:p-10 lg:p-14">
           <div className="w-full">
             <div className="mb-8 lg:hidden">
-              <div className="inline-flex rounded-full bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300">
+              <span className="inline-flex rounded-full bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300">
                 Admin Management System
-              </div>
+              </span>
             </div>
 
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-400">
@@ -137,7 +165,8 @@ export default function RegisterForm() {
             </h2>
 
             <p className="mt-3 text-slate-400">
-              Isi informasi berikut untuk mendaftar.
+              Isi informasi berikut untuk
+              membuat akun.
             </p>
 
             <form
@@ -202,7 +231,9 @@ export default function RegisterForm() {
                   type="password"
                   value={password}
                   onChange={(event) =>
-                    setPassword(event.target.value)
+                    setPassword(
+                      event.target.value,
+                    )
                   }
                   placeholder="Minimal 6 karakter"
                   autoComplete="new-password"
@@ -243,7 +274,9 @@ export default function RegisterForm() {
                   type="checkbox"
                   checked={agree}
                   onChange={(event) =>
-                    setAgree(event.target.checked)
+                    setAgree(
+                      event.target.checked,
+                    )
                   }
                   className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-950"
                 />
@@ -252,8 +285,8 @@ export default function RegisterForm() {
                   htmlFor="agree"
                   className="text-sm leading-6 text-slate-400"
                 >
-                  Saya menyetujui syarat dan ketentuan
-                  yang berlaku.
+                  Saya menyetujui syarat dan
+                  ketentuan yang berlaku.
                 </label>
               </div>
 
@@ -271,21 +304,18 @@ export default function RegisterForm() {
                   role="status"
                   className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
                 >
-                  Registrasi berhasil. Mengarahkan ke
-                  halaman login...
+                  {success}
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading || success}
+                disabled={loading}
                 className="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
-                  ? "Memproses..."
-                  : success
-                    ? "Registrasi berhasil"
-                    : "Daftar sekarang"}
+                  ? "Mendaftarkan akun..."
+                  : "Daftar sekarang"}
               </button>
             </form>
 
@@ -298,14 +328,45 @@ export default function RegisterForm() {
                 Masuk di sini
               </Link>
             </p>
-
-            <p className="mt-6 text-center text-xs text-slate-600">
-              Ini merupakan halaman demonstrasi tanpa
-              database.
-            </p>
           </div>
         </div>
       </section>
     </main>
   );
+}
+
+function translateRegisterError(
+  message: string,
+) {
+  const normalizedMessage =
+    message.toLowerCase();
+
+  if (
+    normalizedMessage.includes(
+      "already registered",
+    ) ||
+    normalizedMessage.includes(
+      "already been registered",
+    )
+  ) {
+    return "Email tersebut sudah terdaftar.";
+  }
+
+  if (
+    normalizedMessage.includes(
+      "password should be",
+    )
+  ) {
+    return "Password belum memenuhi persyaratan.";
+  }
+
+  if (
+    normalizedMessage.includes(
+      "invalid email",
+    )
+  ) {
+    return "Format email tidak valid.";
+  }
+
+  return message;
 }
