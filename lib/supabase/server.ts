@@ -8,11 +8,18 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   const supabasePublishableKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    process.env
+      .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!supabaseUrl || !supabasePublishableKey) {
+  if (!supabaseUrl) {
     throw new Error(
-      "Supabase URL atau publishable key belum tersedia.",
+      "NEXT_PUBLIC_SUPABASE_URL belum tersedia.",
+    );
+  }
+
+  if (!supabasePublishableKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY belum tersedia.",
     );
   }
 
@@ -37,11 +44,7 @@ export async function createClient() {
               },
             );
           } catch {
-            /*
-             * Server Component tidak selalu dapat
-             * mengubah cookie secara langsung.
-             * Proxy akan membantu memperbarui sesi.
-             */
+            // Cookie diperbarui melalui proxy.ts.
           }
         },
       },

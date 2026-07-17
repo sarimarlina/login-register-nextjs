@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 
+import AdminDashboard from "@/components/AdminDashboard";
 import LogoutButton from "@/components/LogoutButton";
+import { isAdminEmail } from "@/lib/admin-access";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Admin | Admin System",
-  description:
-    "Halaman dashboard administrasi",
+  title: "Dashboard Admin",
+  description: "Dashboard pengelolaan pengguna",
 };
 
 export default async function AdminPage() {
@@ -16,95 +17,79 @@ export default async function AdminPage() {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (error || !user) {
     redirect("/login");
   }
 
-  const fullName =
-    typeof user.user_metadata?.full_name ===
-      "string" &&
-    user.user_metadata.full_name.trim()
-      ? user.user_metadata.full_name
-      : "Administrator";
+  const metadataName =
+    typeof user.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name.trim()
+      : "";
+
+  const fullName = metadataName || "Pengguna";
+  const email = user.email ?? "";
+
+  if (isAdminEmail(email)) {
+    return (
+      <AdminDashboard
+        currentUserName={fullName}
+        currentUserEmail={email}
+      />
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-8">
-      <div className="mx-auto max-w-6xl">
-        <header className="flex flex-col gap-5 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-indigo-400">
-              Admin Management System
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10 text-white">
+      <section className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
+        <div className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-6 sm:p-8">
+          <div className="flex justify-end">
+            <LogoutButton />
+          </div>
+
+          <div className="mt-8 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10 text-4xl backdrop-blur">
+              👋
+            </div>
+
+            <p className="mt-8 text-sm font-semibold uppercase tracking-[0.25em] text-white/70">
+              Login berhasil
             </p>
 
-            <h1 className="mt-1 text-xl font-bold">
-              Dashboard Admin
+            <h1 className="mt-4 text-4xl font-black sm:text-6xl">
+              Selamat datang,
+              <span className="mt-2 block">
+                {fullName}
+              </span>
             </h1>
+
+            <p className="mx-auto mt-5 max-w-xl leading-7 text-white/75">
+              Akun kamu berhasil masuk menggunakan
+              Supabase Authentication.
+            </p>
           </div>
+        </div>
 
-          <LogoutButton />
-        </header>
-
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="flex min-h-[500px] items-center justify-center rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-8 text-center shadow-2xl">
-            <div>
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/10 text-4xl">
-                👋
-              </div>
-
-              <p className="mt-8 text-sm font-semibold uppercase tracking-[0.3em] text-indigo-400">
-                Berhasil login
-              </p>
-
-              <h2 className="mt-4 text-5xl font-black sm:text-7xl">
-                Hello World
-              </h2>
-
-              <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-slate-400 sm:text-lg">
-                Selamat datang, {fullName}.
-                Kamu berhasil masuk menggunakan
-                Supabase Authentication.
-              </p>
-
-              <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-5 py-3 text-sm font-medium text-emerald-300">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                Status terautentikasi
-              </div>
-            </div>
-          </div>
-
-          <aside className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Informasi akun
+        <div className="p-6 sm:p-8">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 text-center">
+            <p className="text-sm text-slate-500">
+              Email akun
             </p>
 
-            <div className="mt-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-bold">
-              {fullName
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <h3 className="mt-5 text-2xl font-bold">
-              {fullName}
-            </h3>
-
-            <p className="mt-2 break-all text-sm text-slate-400">
-              {user.email}
+            <p className="mt-2 break-all font-semibold">
+              {email}
             </p>
+          </div>
 
-            <div className="mt-8 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-              <p className="text-sm font-medium text-emerald-300">
-                Akun aktif
-              </p>
-
-              <p className="mt-1 text-sm text-emerald-400">
-                Terhubung dengan Supabase
-              </p>
-            </div>
-          </aside>
-        </section>
-      </div>
+          <div className="mt-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-center">
+            <p className="text-sm font-medium text-emerald-300">
+              Akun aktif dan terautentikasi
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
